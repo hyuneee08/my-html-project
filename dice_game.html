@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>주사위 경품 게임</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:#1a1a2e;
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:1.5rem;
+}
+#app{
+  background:#fff;
+  border-radius:24px;
+  padding:2rem 1.75rem 2rem;
+  max-width:440px;
+  width:100%;
+  text-align:center;
+}
+
+/* 헤더 */
+.game-title{font-size:13px;font-weight:600;letter-spacing:.08em;color:#aaa;text-transform:uppercase;margin-bottom:6px}
+.game-sub{font-size:22px;font-weight:700;color:#1a1a1a;margin-bottom:1.75rem}
+
+/* 주사위 영역 */
+.dice-wrap{
+  display:flex;gap:24px;justify-content:center;align-items:center;
+  margin-bottom:1.5rem;
+}
+.die{
+  width:90px;height:90px;
+  border-radius:16px;
+  background:#f7f6f3;
+  border:2px solid #e8e6e0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:52px;
+  user-select:none;
+  transition:transform .1s;
+  position:relative;
+  overflow:hidden;
+}
+.die.rolling{animation:shake .5s ease-in-out;}
+@keyframes shake{
+  0%,100%{transform:rotate(0deg) scale(1)}
+  15%{transform:rotate(-12deg) scale(1.05)}
+  30%{transform:rotate(10deg) scale(1.07)}
+  45%{transform:rotate(-8deg) scale(1.04)}
+  60%{transform:rotate(6deg) scale(1.05)}
+  75%{transform:rotate(-4deg) scale(1.03)}
+  90%{transform:rotate(2deg) scale(1.01)}
+}
+
+/* 합계 */
+.sum-row{
+  display:flex;align-items:center;justify-content:center;gap:12px;
+  margin-bottom:1.5rem;
+}
+.sum-label{font-size:13px;color:#aaa;font-weight:500}
+.sum-val{font-size:40px;font-weight:700;color:#1a1a1a;min-width:56px;line-height:1}
+
+/* 결과 */
+.result-box{
+  border-radius:16px;padding:1.25rem 1rem;
+  margin-bottom:1.5rem;min-height:90px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  border:2px solid transparent;
+  transition:all .3s;
+}
+.result-box.hidden{background:#f7f6f3;border-color:#f0ede8}
+.result-box.rank1{background:#fffbe6;border-color:#f5c518}
+.result-box.rank2{background:#f0f7ff;border-color:#5b9cf6}
+.result-box.rank3{background:#f3fff6;border-color:#3ecf6e}
+.result-box.norank{background:#fff0f0;border-color:#f5a0a0}
+
+.rank-badge{font-size:13px;font-weight:700;letter-spacing:.05em;margin-bottom:6px}
+.rank1 .rank-badge{color:#c89b00}
+.rank2 .rank-badge{color:#2563eb}
+.rank3 .rank-badge{color:#16a34a}
+.norank .rank-badge{color:#e53e3e}
+
+.prize-text{font-size:20px;font-weight:700;color:#1a1a1a}
+.result-hint{font-size:13px;color:#bbb;margin-top:4px}
+
+/* 버튼 */
+#roll-btn{
+  width:100%;padding:.85rem 0;
+  font-size:16px;font-weight:700;
+  border:none;border-radius:14px;
+  background:#1a1a2e;color:#fff;
+  cursor:pointer;
+  transition:opacity .15s,transform .1s;
+  margin-bottom:1.5rem;
+  letter-spacing:.03em;
+}
+#roll-btn:hover{opacity:.88}
+#roll-btn:active{transform:scale(.98)}
+#roll-btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* 등수 기준표 */
+.table-title{font-size:12px;font-weight:600;color:#ccc;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
+.rank-table{width:100%;border-collapse:collapse;font-size:13px}
+.rank-table th{color:#aaa;font-weight:500;padding:5px 8px;border-bottom:1px solid #f0f0ee;text-align:center}
+.rank-table td{padding:8px;border-bottom:1px solid #f5f5f3;text-align:center;color:#1a1a1a}
+.rank-table tr:last-child td{border-bottom:none}
+.rtag{display:inline-block;padding:2px 10px;border-radius:20px;font-weight:700;font-size:12px}
+.rtag.r1{background:#fffbe6;color:#c89b00}
+.rtag.r2{background:#f0f7ff;color:#2563eb}
+.rtag.r3{background:#f3fff6;color:#16a34a}
+
+/* ── 설정 패널 ── */
+.cfg-toggle{
+  font-size:12px;color:#bbb;cursor:pointer;
+  border:none;background:none;padding:0 0 1.25rem;
+  display:block;width:100%;text-align:center;
+  text-decoration:underline;text-underline-offset:2px;
+}
+.cfg-panel{
+  background:#f7f6f3;border-radius:14px;padding:1.25rem;
+  margin-bottom:1.5rem;text-align:left;
+}
+.cfg-panel label{font-size:12px;color:#888;font-weight:600;display:block;margin-bottom:4px}
+.cfg-panel input[type=text]{
+  width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:8px;
+  font-size:14px;color:#1a1a1a;background:#fff;margin-bottom:12px;
+}
+.cfg-panel input[type=number]{
+  width:60px;padding:6px 8px;border:1px solid #ddd;border-radius:8px;
+  font-size:14px;color:#1a1a1a;background:#fff;
+}
+.cfg-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.cfg-row span{font-size:13px;color:#888}
+.cfg-apply{
+  width:100%;padding:.6rem;font-size:13px;font-weight:700;
+  border:none;border-radius:9px;background:#1a1a2e;color:#fff;cursor:pointer;margin-top:4px;
+}
+.cfg-apply:hover{opacity:.88}
+
+/* 기록 */
+.history-wrap{text-align:left;margin-top:1.25rem}
+.history-title{font-size:12px;font-weight:600;color:#ccc;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
+table.hist{width:100%;border-collapse:collapse;font-size:13px}
+table.hist th{color:#aaa;font-weight:500;padding:5px 8px;border-bottom:1px solid #f0f0ee;text-align:center}
+table.hist td{padding:7px 8px;border-bottom:1px solid #f5f5f3;text-align:center;color:#1a1a1a}
+table.hist tr:last-child td{border-bottom:none}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <p class="game-title">경품 추첨</p>
+  <p class="game-sub">주사위 2개를 굴려라!</p>
+
+  <!-- 주사위 -->
+  <div class="dice-wrap">
+    <div class="die" id="die1">🎲</div>
+    <div style="font-size:22px;color:#ccc;font-weight:300">+</div>
+    <div class="die" id="die2">🎲</div>
+  </div>
+
+  <!-- 합계 -->
+  <div class="sum-row">
+    <span class="sum-label">합계</span>
+    <span class="sum-val" id="sumVal">—</span>
+  </div>
+
+  <!-- 결과 -->
+  <div class="result-box hidden" id="resultBox">
+    <div class="rank-badge" id="rankBadge"></div>
+    <div class="prize-text" id="prizeText">주사위를 굴려보세요!</div>
+    <div class="result-hint" id="resultHint"></div>
+  </div>
+
+  <!-- 굴리기 버튼 -->
+  <button id="roll-btn" onclick="rollDice()">🎲 주사위 굴리기</button>
+
+  <!-- 등수 기준표 -->
+  <p class="table-title">등수 기준</p>
+  <table class="rank-table" id="rankTable"></table>
+
+  <!-- 설정 토글 -->
+  <button class="cfg-toggle" onclick="toggleCfg()">⚙️ 경품 및 범위 수정</button>
+
+  <!-- 설정 패널 -->
+  <div class="cfg-panel" id="cfgPanel" style="display:none">
+    <label>🥇 1등 경품</label>
+    <input type="text" id="cfg1prize" value="1등 경품"/>
+    <label>1등 합계 범위</label>
+    <div class="cfg-row">
+      <input type="number" id="cfg1min" value="10" min="2" max="12"/>
+      <span>~</span>
+      <input type="number" id="cfg1max" value="12" min="2" max="12"/>
+    </div>
+
+    <label>🥈 2등 경품</label>
+    <input type="text" id="cfg2prize" value="2등 경품"/>
+    <label>2등 합계 범위</label>
+    <div class="cfg-row">
+      <input type="number" id="cfg2min" value="6" min="2" max="12"/>
+      <span>~</span>
+      <input type="number" id="cfg2max" value="9" min="2" max="12"/>
+    </div>
+
+    <label>🥉 3등 경품</label>
+    <input type="text" id="cfg3prize" value="3등 경품"/>
+    <label>3등 합계 범위</label>
+    <div class="cfg-row">
+      <input type="number" id="cfg3min" value="2" min="2" max="12"/>
+      <span>~</span>
+      <input type="number" id="cfg3max" value="5" min="2" max="12"/>
+    </div>
+
+    <button class="cfg-apply" onclick="applyCfg()">적용하기</button>
+  </div>
+
+  <!-- 기록 -->
+  <div class="history-wrap" id="histWrap" style="display:none">
+    <p class="history-title">기록</p>
+    <table class="hist">
+      <thead><tr><th>시도</th><th>주사위</th><th>합계</th><th>결과</th></tr></thead>
+      <tbody id="histBody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+const FACES = ['','⚀','⚁','⚂','⚃','⚄','⚅'];
+
+let config = {
+  ranks: [
+    {rank:1, min:10, max:12, prize:'1등 경품', cls:'rank1', tag:'r1', badge:'🥇 1등'},
+    {rank:2, min:6,  max:9,  prize:'2등 경품', cls:'rank2', tag:'r2', badge:'🥈 2등'},
+    {rank:3, min:2,  max:5,  prize:'3등 경품', cls:'rank3', tag:'r3', badge:'🥉 3등'},
+  ]
+};
+
+let history = [];
+let rolling = false;
+
+const $die1    = document.getElementById('die1');
+const $die2    = document.getElementById('die2');
+const $sumVal  = document.getElementById('sumVal');
+const $resBox  = document.getElementById('resultBox');
+const $badge   = document.getElementById('rankBadge');
+const $prize   = document.getElementById('prizeText');
+const $hint    = document.getElementById('resultHint');
+const $rollBtn = document.getElementById('roll-btn');
+const $histW   = document.getElementById('histWrap');
+const $histB   = document.getElementById('histBody');
+
+function renderRankTable(){
+  const t = document.getElementById('rankTable');
+  t.innerHTML = `<thead><tr><th>등수</th><th>합계 범위</th><th>경품</th></tr></thead>`
+    + config.ranks.map(r=>
+      `<tr>
+        <td><span class="rtag ${r.tag}">${r.badge}</span></td>
+        <td>${r.min} ~ ${r.max}</td>
+        <td style="font-weight:600">${r.prize}</td>
+      </tr>`
+    ).join('');
+}
+renderRankTable();
+
+function getResult(sum){
+  for(const r of config.ranks){
+    if(sum >= r.min && sum <= r.max) return r;
+  }
+  return null;
+}
+
+function rollDice(){
+  if(rolling) return;
+  rolling = true;
+  $rollBtn.disabled = true;
+  $sumVal.textContent = '—';
+  $resBox.className = 'result-box hidden';
+  $badge.textContent = '';
+  $prize.textContent = '';
+  $hint.textContent = '';
+
+  $die1.classList.add('rolling');
+  $die2.classList.add('rolling');
+
+  let frames = 0;
+  const flicker = setInterval(()=>{
+    $die1.textContent = FACES[Math.ceil(Math.random()*6)];
+    $die2.textContent = FACES[Math.ceil(Math.random()*6)];
+    frames++;
+    if(frames > 14){
+      clearInterval(flicker);
+      finish();
+    }
+  }, 60);
+}
+
+function finish(){
+  const d1 = Math.ceil(Math.random()*6);
+  const d2 = Math.ceil(Math.random()*6);
+  $die1.textContent = FACES[d1];
+  $die2.textContent = FACES[d2];
+  $die1.classList.remove('rolling');
+  $die2.classList.remove('rolling');
+
+  const sum = d1+d2;
+  $sumVal.textContent = sum;
+
+  const res = getResult(sum);
+  if(res){
+    $resBox.className = 'result-box ' + res.cls;
+    $badge.textContent = res.badge;
+    $prize.textContent = res.prize;
+    $hint.textContent = `합계 ${sum} → ${res.min}~${res.max} 범위`;
+  } else {
+    $resBox.className = 'result-box norank';
+    $badge.textContent = '😢 꽝';
+    $prize.textContent = '아쉽게도 해당 없음';
+    $hint.textContent = `합계 ${sum}`;
+  }
+
+  history.unshift({n: history.length+1, d1, d2, sum, res});
+  renderHistory();
+
+  rolling = false;
+  $rollBtn.disabled = false;
+}
+
+function renderHistory(){
+  $histW.style.display = 'block';
+  $histB.innerHTML = history.slice(0,10).map(h=>{
+    const label = h.res
+      ? `<span class="rtag ${h.res.tag}">${h.res.badge}</span>`
+      : `<span class="rtag" style="background:#fff0f0;color:#e53e3e">꽝</span>`;
+    return `<tr>
+      <td>${h.n}</td>
+      <td>${FACES[h.d1]} ${FACES[h.d2]}</td>
+      <td style="font-weight:600">${h.sum}</td>
+      <td>${label}</td>
+    </tr>`;
+  }).join('');
+}
+
+function toggleCfg(){
+  const p = document.getElementById('cfgPanel');
+  p.style.display = p.style.display==='none' ? 'block' : 'none';
+}
+
+function applyCfg(){
+  config.ranks[0].prize = document.getElementById('cfg1prize').value || '1등 경품';
+  config.ranks[0].min   = parseInt(document.getElementById('cfg1min').value);
+  config.ranks[0].max   = parseInt(document.getElementById('cfg1max').value);
+  config.ranks[1].prize = document.getElementById('cfg2prize').value || '2등 경품';
+  config.ranks[1].min   = parseInt(document.getElementById('cfg2min').value);
+  config.ranks[1].max   = parseInt(document.getElementById('cfg2max').value);
+  config.ranks[2].prize = document.getElementById('cfg3prize').value || '3등 경품';
+  config.ranks[2].min   = parseInt(document.getElementById('cfg3min').value);
+  config.ranks[2].max   = parseInt(document.getElementById('cfg3max').value);
+  renderRankTable();
+  document.getElementById('cfgPanel').style.display = 'none';
+}
+</script>
+</body>
+</html>

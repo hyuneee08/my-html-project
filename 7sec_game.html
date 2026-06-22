@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>7초 맞추기 게임</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f3;
+      color: #1a1a1a;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #app {
+      background: #fff;
+      border-radius: 20px;
+      padding: 2.5rem 2rem;
+      max-width: 480px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 2px 24px rgba(0,0,0,0.07);
+    }
+    h1 { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
+    .subtitle { font-size: 14px; color: #888; margin-bottom: 2rem; }
+    .timer-display {
+      font-size: 60px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      font-family: 'Courier New', monospace;
+      letter-spacing: -2px;
+      margin-bottom: 1.25rem;
+      color: #1a1a1a;
+    }
+    .result-msg {
+      font-size: 20px;
+      font-weight: 600;
+      min-height: 30px;
+      margin-bottom: 1.5rem;
+    }
+    .result-msg.success { color: #1a9e5f; }
+    .result-msg.close   { color: #c07a00; }
+    .result-msg.fail    { color: #d03030; }
+    .btn-wrap { margin-bottom: 1.25rem; }
+    #mainBtn {
+      width: 130px; height: 130px;
+      border-radius: 50%;
+      border: 2px solid #ccc;
+      background: #fff;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1a1a1a;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s;
+    }
+    #mainBtn:hover { background: #f0f0ee; }
+    #mainBtn:active { transform: scale(0.97); }
+    #mainBtn.active  { border-color: #3b82f6; background: #eff6ff; color: #1d4ed8; }
+    #mainBtn.success { border-color: #1a9e5f; background: #edfaf3; color: #1a9e5f; }
+    #mainBtn.close   { border-color: #c07a00; background: #fffbea; color: #c07a00; }
+    #mainBtn.fail    { border-color: #d03030; background: #fff0f0; color: #d03030; }
+    .hint { font-size: 13px; color: #aaa; margin-bottom: 2rem; min-height: 20px; }
+    .records-wrap { text-align: left; margin-top: 0.5rem; }
+    .records-title { font-size: 14px; font-weight: 600; color: #666; margin-bottom: 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th {
+      color: #888; font-weight: 500;
+      padding: 6px 10px;
+      border-bottom: 1px solid #eee;
+      text-align: center;
+    }
+    td {
+      padding: 9px 10px;
+      border-bottom: 1px solid #f0f0f0;
+      text-align: center;
+      color: #1a1a1a;
+    }
+    tr:last-child td { border-bottom: none; }
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      padding: 2px 9px;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+    .badge.s { background: #edfaf3; color: #1a9e5f; }
+    .badge.c { background: #fffbea; color: #c07a00; }
+    .badge.f { background: #fff0f0; color: #d03030; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <h1>7초 맞추기 게임</h1>
+  <p class="subtitle">7.00초를 맞춰라!</p>
+
+  <div class="timer-display" id="timerDisplay">00:00</div>
+  <div class="result-msg" id="resultMsg"></div>
+
+  <div class="btn-wrap">
+    <button id="mainBtn" onclick="handleBtn()">시작</button>
+  </div>
+  <p class="hint" id="hintText">버튼을 누르면 타이머가 시작됩니다</p>
+
+  <div class="records-wrap" id="recordsWrap" style="display:none;">
+    <p class="records-title">기록</p>
+    <table>
+      <thead>
+        <tr><th>시도</th><th>시간 (초)</th><th>오차 (초)</th><th>결과</th></tr>
+      </thead>
+      <tbody id="recordsBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const TARGET = 7.0;
+const SUCCESS = 0.05;
+const CLOSE = 0.3;
+let running = false;
+let startTime = null;
+let rafId = null;
+let records = [];
+
+const timerDisplay = document.getElementById('timerDisplay');
+const resultMsg    = document.getElementById('resultMsg');
+const mainBtn      = document.getElementById('mainBtn');
+const hintText     = document.getElementById('hintText');
+const recordsWrap  = document.getElementById('recordsWrap');
+const recordsBody  = document.getElementById('recordsBody');
+
+function fmt(ms) {
+  const s  = Math.floor(ms / 1000);
+  const cs = Math.floor((ms % 1000) / 10);
+  return String(s).padStart(2,'0') + ':' + String(cs).padStart(2,'0');
+}
+
+function tick() {
+  if (!running) return;
+  timerDisplay.textContent = fmt(Date.now() - startTime);
+  rafId = requestAnimationFrame(tick);
+}
+
+function handleBtn() {
+  if (!running) {
+    running   = true;
+    startTime = Date.now();
+    mainBtn.textContent  = '정지';
+    mainBtn.className    = 'active';
+    resultMsg.textContent = '';
+    resultMsg.className   = 'result-msg';
+    hintText.textContent  = '7.00초가 되면 버튼을 누르세요!';
+    rafId = requestAnimationFrame(tick);
+  } else {
+    running = false;
+    cancelAnimationFrame(rafId);
+
+    const elapsed = (Date.now() - startTime) / 1000;
+    const diff    = Math.abs(elapsed - TARGET);
+    const elapsedFmt = elapsed.toFixed(2);
+    const diffFmt    = diff.toFixed(2);
+
+    let grade, label, cls;
+    if (diff <= SUCCESS)      { grade='s'; label='성공! 🎯'; cls='success'; }
+    else if (diff <= CLOSE)   { grade='c'; label='아깝습니다!'; cls='close'; }
+    else                      { grade='f'; label='실패!'; cls='fail'; }
+
+    resultMsg.textContent = label;
+    resultMsg.className   = 'result-msg ' + cls;
+    mainBtn.textContent   = '다시';
+    mainBtn.className     = cls;
+    hintText.textContent  = `측정 시간: ${elapsedFmt}초 / 오차: ${diffFmt}초`;
+    timerDisplay.textContent = fmt(Math.round(elapsed * 1000));
+
+    records.push({ attempt: records.length + 1, elapsed: elapsedFmt, diff: diffFmt, grade });
+    renderRecords();
+  }
+}
+
+function renderRecords() {
+  recordsWrap.style.display = 'block';
+  const badgeText = { s:'성공', c:'아깝다', f:'실패' };
+  recordsBody.innerHTML = records.map(r =>
+    `<tr>
+      <td>${r.attempt}</td>
+      <td>${r.elapsed}</td>
+      <td>${r.diff}</td>
+      <td><span class="badge ${r.grade}">${badgeText[r.grade]}</span></td>
+    </tr>`
+  ).join('');
+}
+</script>
+</body>
+</html>

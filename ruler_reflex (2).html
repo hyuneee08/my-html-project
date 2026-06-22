@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>30cm 자 순발력 테스트</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    background:#f0ede8;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  #app{
+    background:#fff;
+    border-radius:20px;
+    padding:2rem 1.5rem 2rem;
+    max-width:420px;
+    width:100%;
+    text-align:center;
+    box-shadow:0 2px 24px rgba(0,0,0,0.07);
+  }
+
+  /* 메인 타겟 텍스트 */
+  .main-target{font-size:36px;font-weight:700;color:#1a1a1a;margin-bottom:1.5rem;letter-spacing:-1px;line-height:1.2}
+  .main-target .cm{color:#dc2626}
+
+  /* arena */
+  #arena{
+    position:relative;
+    height:340px;
+    width:100px;
+    margin:0 auto 1.25rem;
+    cursor:pointer;
+  }
+  #ruler-svg{
+    position:absolute;
+    left:0;top:0;
+    width:100%;
+    will-change:transform;
+  }
+
+  /* result */
+  .result-msg{font-size:18px;font-weight:600;min-height:26px;margin-bottom:1rem;color:#1a1a1a}
+  .result-msg.great{color:#1a9e5f}
+  .result-msg.good {color:#c07a00}
+  .result-msg.slow {color:#d03030}
+
+  /* stats */
+  .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1.25rem}
+  .stat{background:#f7f6f3;border-radius:10px;padding:.65rem .5rem}
+  .stat-label{font-size:11px;color:#aaa;margin-bottom:3px}
+  .stat-val{font-size:17px;font-weight:600;color:#1a1a1a}
+
+  /* button */
+  #main-btn{
+    width:100%;padding:.7rem 0;
+    font-size:15px;font-weight:600;
+    border:1.5px solid #ccc;border-radius:12px;
+    background:#fff;color:#1a1a1a;
+    cursor:pointer;
+    transition:background .12s,border-color .12s,transform .08s;
+    margin-bottom:.65rem;
+  }
+  #main-btn:hover{background:#f5f4f1}
+  #main-btn:active{transform:scale(.98)}
+  #main-btn.ready{border-color:#3b82f6;background:#eff6ff;color:#1d4ed8}
+  #main-btn.go   {border-color:#dc2626;background:#fff0f0;color:#dc2626}
+
+  .hint{font-size:12px;color:#bbb;margin-bottom:1.25rem;min-height:18px}
+
+  /* 하단 타이틀 */
+  .footer-divider{border:none;border-top:1px solid #f0f0ee;margin:1.25rem 0 1rem}
+  .footer-title{font-size:15px;font-weight:600;color:#1a1a1a;margin-bottom:3px}
+  .footer-sub{font-size:12px;color:#bbb;margin-bottom:1.25rem}
+
+  /* records */
+  .rec-wrap{text-align:left}
+  .rec-title{font-size:13px;font-weight:600;color:#888;margin-bottom:6px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{color:#aaa;font-weight:500;padding:5px 8px;border-bottom:1px solid #f0f0f0;text-align:center}
+  td{padding:7px 8px;border-bottom:1px solid #f5f5f5;text-align:center;color:#1a1a1a}
+  tr:last-child td{border-bottom:none}
+  .badge{display:inline-block;font-size:11px;padding:2px 9px;border-radius:20px;font-weight:600}
+  .badge.great{background:#edfaf3;color:#1a9e5f}
+  .badge.good {background:#fffbea;color:#c07a00}
+  .badge.slow {background:#fff0f0;color:#d03030}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- 메인 목표 텍스트 -->
+  
+
+  <div id="arena" onclick="handleClick()">
+    <svg id="ruler-svg" viewBox="0 0 100 340" xmlns="http://www.w3.org/2000/svg"></svg>
+  </div>
+
+  <div class="result-msg" id="resultMsg"></div>
+
+  <div class="stat-row">
+    <div class="stat"><div class="stat-label">낙하 거리</div><div class="stat-val" id="sDist">—</div></div>
+    <div class="stat"><div class="stat-label">반응 시간</div><div class="stat-val" id="sTime">—</div></div>
+    <div class="stat"><div class="stat-label">최고 기록</div><div class="stat-val" id="sBest">—</div></div>
+  </div>
+
+  <button id="main-btn" onclick="handleClick()">시작하기</button>
+  <p class="hint" id="hint">버튼을 누르면 랜덤 시간 후 자가 떨어집니다</p>
+
+  <!-- 하단 제목 -->
+  <hr class="footer-divider"/>
+  <p class="footer-title"><span style="color:#1a9e5f">0cm</span>을 잡아라!</p>
+  <p class="footer-sub">자가 떨어지면 최대한 빨리 클릭해서 잡으세요!</p>
+
+  <div class="rec-wrap" id="recWrap" style="display:none">
+    <p class="rec-title">기록</p>
+    <table>
+      <thead><tr><th>시도</th><th>낙하 거리</th><th>반응 시간</th><th>등급</th></tr></thead>
+      <tbody id="recBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const RULER_CM   = 30;
+const PX_PER_CM  = 9.8;
+const MAX_FALL   = RULER_CM * PX_PER_CM;
+const G          = 980;
+
+let state     = 'idle';
+let dropStart = null;
+let dropTimer = null;
+let animId    = null;
+let records   = [];
+let bestMs    = null;
+
+const $svg     = document.getElementById('ruler-svg');
+const $btn     = document.getElementById('main-btn');
+const $hint    = document.getElementById('hint');
+const $result  = document.getElementById('resultMsg');
+const $sDist   = document.getElementById('sDist');
+const $sTime   = document.getElementById('sTime');
+const $sBest   = document.getElementById('sBest');
+const $recWrap = document.getElementById('recWrap');
+const $recBody = document.getElementById('recBody');
+
+function buildRuler(){
+  const H=340;
+  let s = `<rect x="28" y="0" width="44" height="${H}" fill="#f5c842" rx="2"/>`;
+  s    += `<rect x="28" y="0" width="44" height="${H}" fill="none" stroke="#b89a10" stroke-width="0.6"/>`;
+  for(let cm=0;cm<=RULER_CM;cm++){
+    const y=cm*PX_PER_CM;
+    const big=cm%5===0;
+    const tw=big?18:10;
+    s+=`<line x1="28" y1="${y}" x2="${28+tw}" y2="${y}" stroke="#7a6000" stroke-width="${big?1.2:.5}"/>`;
+    s+=`<line x1="72" y1="${y}" x2="${72-tw}" y2="${y}" stroke="#7a6000" stroke-width="${big?1.2:.5}"/>`;
+    if(big&&cm>0)
+      s+=`<text x="56" y="${y+3.5}" font-size="8.5" fill="#7a6000" text-anchor="middle">${cm}</text>`;
+    if(cm<RULER_CM){
+      const hy=y+PX_PER_CM*.5;
+      s+=`<line x1="28" y1="${hy}" x2="${28+7}" y2="${hy}" stroke="#7a6000" stroke-width=".4"/>`;
+      s+=`<line x1="72" y1="${hy}" x2="${72-7}" y2="${hy}" stroke="#7a6000" stroke-width=".4"/>`;
+    }
+  }
+  s+=`<rect x="33" y="${H-9}" width="34" height="9" rx="4.5" fill="#e0a800"/>`;
+  $svg.innerHTML=s;
+}
+buildRuler();
+
+function setY(py){ $svg.style.transform=`translateY(${py}px)`; }
+setY(-MAX_FALL);
+
+function tick(){
+  if(state!=='falling') return;
+  const t=(Date.now()-dropStart)/1000;
+  const fallenCm=0.5*G*t*t;
+  const fallenPx=fallenCm*(PX_PER_CM/10);
+  setY(Math.min(fallenPx,MAX_FALL)-MAX_FALL);
+  if(fallenPx<MAX_FALL) animId=requestAnimationFrame(tick);
+  else missed();
+}
+
+function grade(ms){
+  if(ms<250) return {g:'great',label:'번개 반응! ⚡'};
+  if(ms<320) return {g:'great',label:'훌륭해요!'};
+  if(ms<400) return {g:'good', label:'잘했어요!'};
+  if(ms<500) return {g:'good', label:'좋아요!'};
+  return           {g:'slow', label:'조금 더 빠르게!'};
+}
+function msToCm(ms){
+  const t=ms/1000;
+  return Math.min(0.5*G*t*t/10, RULER_CM);
+}
+
+function handleClick(){
+  if     (state==='idle')                      startReady();
+  else if(state==='ready')                     tooEarly();
+  else if(state==='falling')                   doGrab();
+  else if(state==='result'||state==='missed')  reset();
+}
+
+function startReady(){
+  state='ready';
+  $btn.textContent='기다리는 중...';
+  $btn.className='ready';
+  $hint.textContent='자가 떨어질 때까지 기다리세요!';
+  $result.textContent='';
+  $result.className='result-msg';
+  setY(-MAX_FALL);
+  dropTimer=setTimeout(startDrop, 1000+Math.random()*2500);
+}
+
+function startDrop(){
+  if(state!=='ready') return;
+  state='falling';
+  dropStart=Date.now();
+  $btn.textContent='잡아!';
+  $btn.className='go';
+  $hint.textContent='지금 클릭하세요!';
+  animId=requestAnimationFrame(tick);
+}
+
+function doGrab(){
+  const ms=Date.now()-dropStart;
+  cancelAnimationFrame(animId);
+  state='result';
+  const cm=msToCm(ms).toFixed(1);
+  const {g,label}=grade(ms);
+  $result.textContent=label;
+  $result.className='result-msg '+g;
+  $sDist.textContent=cm+' cm';
+  $sTime.textContent=ms+' ms';
+  if(bestMs===null||ms<bestMs){ bestMs=ms; $sBest.textContent=ms+' ms'; }
+  $btn.textContent='다시 하기';
+  $btn.className='';
+  $hint.textContent=`낙하 거리 ${cm}cm · 반응 시간 ${ms}ms`;
+  records.push({n:records.length+1,cm,ms,g,label});
+  renderRecords();
+}
+
+function tooEarly(){
+  clearTimeout(dropTimer);
+  state='result';
+  $result.textContent='너무 일찍 눌렀어요!';
+  $result.className='result-msg slow';
+  $btn.textContent='다시 하기';
+  $btn.className='';
+  $hint.textContent='자가 떨어진 뒤에 클릭하세요';
+}
+
+function missed(){
+  cancelAnimationFrame(animId);
+  state='missed';
+  $result.textContent='놓쳤어요!';
+  $result.className='result-msg slow';
+  $btn.textContent='다시 하기';
+  $btn.className='';
+  $hint.textContent='자를 잡지 못했어요. 다시 도전해보세요!';
+}
+
+function reset(){
+  state='idle';
+  $btn.textContent='시작하기';
+  $btn.className='';
+  $result.textContent='';
+  $result.className='result-msg';
+  $hint.textContent='버튼을 누르면 랜덤 시간 후 자가 떨어집니다';
+  $sDist.textContent='—';
+  $sTime.textContent='—';
+  setY(-MAX_FALL);
+}
+
+function renderRecords(){
+  $recWrap.style.display='block';
+  $recBody.innerHTML=records.map(r=>
+    `<tr><td>${r.n}</td><td>${r.cm} cm</td><td>${r.ms} ms</td><td><span class="badge ${r.g}">${r.label}</span></td></tr>`
+  ).join('');
+}
+</script>
+</body>
+</html>

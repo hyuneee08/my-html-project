@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>가위바위보</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:#0f172a;
+  min-height:100vh;
+  display:flex;align-items:center;justify-content:center;
+  padding:1.5rem;
+}
+#app{
+  background:#fff;
+  border-radius:24px;
+  padding:2rem 1.75rem;
+  max-width:460px;
+  width:100%;
+  text-align:center;
+}
+.step-header{margin-bottom:1.75rem}
+.step-tag{
+  display:inline-block;font-size:11px;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;
+  padding:3px 12px;border-radius:20px;margin-bottom:8px;
+}
+.step-tag.p1{background:#fef3c7;color:#b45309}
+.step-tag.p2{background:#dbeafe;color:#1d4ed8}
+.step-tag.done{background:#dcfce7;color:#15803d}
+.step-title{font-size:24px;font-weight:700;color:#0f172a}
+.step-sub{font-size:14px;color:#94a3b8;margin-top:4px}
+
+.choices{display:flex;gap:14px;justify-content:center;margin-bottom:1.75rem}
+.choice-btn{
+  flex:1;max-width:120px;
+  padding:1.1rem .5rem;
+  border-radius:16px;
+  border:2px solid #e2e8f0;
+  background:#f8fafc;
+  cursor:pointer;
+  transition:border-color .15s,background .15s,transform .1s;
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+}
+.choice-btn:hover{border-color:#94a3b8;background:#f1f5f9}
+.choice-btn:active{transform:scale(.96)}
+.choice-btn.selected{border-color:#0f172a;background:#0f172a}
+.choice-btn.selected .choice-label{color:#fff}
+.choice-icon{font-size:40px;line-height:1}
+.choice-label{font-size:13px;font-weight:700;color:#334155}
+
+.confirm-btn{
+  width:100%;padding:.8rem;
+  font-size:15px;font-weight:700;
+  border:none;border-radius:13px;
+  background:#0f172a;color:#fff;
+  cursor:pointer;
+  transition:opacity .15s,transform .1s;
+  margin-bottom:1.75rem;
+}
+.confirm-btn:hover{opacity:.85}
+.confirm-btn:active{transform:scale(.98)}
+.confirm-btn:disabled{opacity:.3;cursor:not-allowed}
+
+/* ── 블라인드 화면 ── */
+#blind{
+  position:fixed;inset:0;
+  background:#0f172a;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:20px;
+  z-index:999;
+}
+#blind.hidden{display:none!important}
+.blind-icon{font-size:72px}
+.blind-title{font-size:26px;font-weight:800;color:#fff;letter-spacing:-.5px}
+.blind-sub{font-size:15px;color:#64748b;line-height:1.6}
+.blind-btn{
+  margin-top:8px;
+  padding:.85rem 2.5rem;
+  font-size:15px;font-weight:700;
+  border:none;border-radius:14px;
+  background:#fff;color:#0f172a;
+  cursor:pointer;
+  transition:opacity .15s,transform .1s;
+}
+.blind-btn:hover{opacity:.88}
+.blind-btn:active{transform:scale(.97)}
+
+.result-section{margin-bottom:1.75rem}
+.versus-row{
+  display:flex;align-items:center;justify-content:center;gap:16px;
+  margin-bottom:1.25rem;
+}
+.player-card{
+  flex:1;border-radius:16px;padding:1.25rem .75rem;
+  border:2px solid #e2e8f0;background:#f8fafc;
+}
+.player-card.winner{border-color:#f59e0b;background:#fffbeb}
+.player-card.loser{border-color:#e2e8f0;background:#f8fafc;opacity:.5}
+.player-card.draw{border-color:#a5b4fc;background:#eef2ff}
+.p-label{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#94a3b8;margin-bottom:6px}
+.p-hand{font-size:48px;line-height:1;margin-bottom:6px}
+.p-name{font-size:13px;font-weight:700;color:#334155}
+.vs-badge{font-size:18px;font-weight:900;color:#cbd5e1;flex-shrink:0}
+
+.result-banner{
+  border-radius:14px;padding:1rem;
+  font-size:20px;font-weight:800;
+}
+.result-banner.p1win{background:#fef3c7;color:#b45309}
+.result-banner.p2win{background:#dbeafe;color:#1d4ed8}
+.result-banner.draw{background:#f1f5f9;color:#475569}
+
+.reset-btn{
+  width:100%;padding:.75rem;
+  font-size:14px;font-weight:700;
+  border:2px solid #e2e8f0;border-radius:13px;
+  background:#fff;color:#334155;
+  cursor:pointer;transition:background .12s;
+}
+.reset-btn:hover{background:#f1f5f9}
+
+.history-wrap{text-align:left;margin-top:1.5rem}
+.history-title{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#cbd5e1;margin-bottom:8px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{color:#94a3b8;font-weight:600;padding:5px 8px;border-bottom:1px solid #f1f5f9;text-align:center}
+td{padding:7px 8px;border-bottom:1px solid #f8fafc;text-align:center;color:#334155}
+tr:last-child td{border-bottom:none}
+.rbadge{display:inline-block;font-size:11px;padding:2px 9px;border-radius:20px;font-weight:700}
+.rbadge.p1win{background:#fef3c7;color:#b45309}
+.rbadge.p2win{background:#dbeafe;color:#1d4ed8}
+.rbadge.draw{background:#f1f5f9;color:#475569}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<!-- 블라인드 오버레이 -->
+<div id="blind" class="hidden">
+  <div class="blind-icon">🙈</div>
+  <div class="blind-title">1P 선택 완료!</div>
+  <div class="blind-sub">화면을 보지 마세요<br>2P가 준비되면 버튼을 눌러주세요</div>
+  <button class="blind-btn" onclick="showStep2()">2P 준비 완료</button>
+</div>
+
+<div id="app">
+
+  <!-- STEP 1: 1P 선택 -->
+  <div id="step1">
+    <div class="step-header">
+      <div class="step-tag p1">1P 차례</div>
+      <div class="step-title">가위 · 바위 · 보</div>
+      <div class="step-sub">1P가 먼저 선택하세요</div>
+    </div>
+    <div class="choices">
+      <button class="choice-btn" onclick="select1('가위')" id="btn1-가위">
+        <span class="choice-icon">✌️</span><span class="choice-label">가위</span>
+      </button>
+      <button class="choice-btn" onclick="select1('바위')" id="btn1-바위">
+        <span class="choice-icon">✊</span><span class="choice-label">바위</span>
+      </button>
+      <button class="choice-btn" onclick="select1('보')" id="btn1-보">
+        <span class="choice-icon">🖐️</span><span class="choice-label">보</span>
+      </button>
+    </div>
+    <button class="confirm-btn" id="confirmBtn1" onclick="confirm1()" disabled>선택 완료</button>
+  </div>
+
+  <!-- STEP 2: 2P 선택 -->
+  <div id="step2" class="hidden">
+    <div class="step-header">
+      <div class="step-tag p2">2P 차례</div>
+      <div class="step-title">가위 · 바위 · 보</div>
+      <div class="step-sub">2P가 선택하세요</div>
+    </div>
+    <div class="choices">
+      <button class="choice-btn" onclick="select2('가위')" id="btn2-가위">
+        <span class="choice-icon">✌️</span><span class="choice-label">가위</span>
+      </button>
+      <button class="choice-btn" onclick="select2('바위')" id="btn2-바위">
+        <span class="choice-icon">✊</span><span class="choice-label">바위</span>
+      </button>
+      <button class="choice-btn" onclick="select2('보')" id="btn2-보">
+        <span class="choice-icon">🖐️</span><span class="choice-label">보</span>
+      </button>
+    </div>
+    <button class="confirm-btn" id="confirmBtn2" onclick="confirm2()" disabled>선택 완료</button>
+  </div>
+
+  <!-- STEP 3: 결과 -->
+  <div id="step3" class="hidden">
+    <div class="step-header">
+      <div class="step-tag done">결과 공개</div>
+      <div class="step-title" id="resultTitle"></div>
+    </div>
+    <div class="result-section">
+      <div class="versus-row">
+        <div class="player-card" id="card1">
+          <div class="p-label">1P</div>
+          <div class="p-hand" id="hand1"></div>
+          <div class="p-name" id="name1"></div>
+        </div>
+        <div class="vs-badge">VS</div>
+        <div class="player-card" id="card2">
+          <div class="p-label">2P</div>
+          <div class="p-hand" id="hand2"></div>
+          <div class="p-name" id="name2"></div>
+        </div>
+      </div>
+      <div class="result-banner" id="resultBanner"></div>
+    </div>
+    <button class="reset-btn" onclick="reset()">🔄 다시 하기</button>
+    <div class="history-wrap" id="histWrap" style="display:none">
+      <p class="history-title">기록</p>
+      <table>
+        <thead><tr><th>회</th><th>1P</th><th>2P</th><th>결과</th></tr></thead>
+        <tbody id="histBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+<script>
+const EMOJI={가위:'✌️',바위:'✊',보:'🖐️'};
+const BEATS={가위:'보',바위:'가위',보:'바위'};
+let p1=null,p2=null,history=[];
+
+function select1(c){
+  p1=c;
+  ['가위','바위','보'].forEach(x=>document.getElementById('btn1-'+x).classList.toggle('selected',x===c));
+  document.getElementById('confirmBtn1').disabled=false;
+}
+
+function confirm1(){
+  // 1P 선택 완료 → 블라인드 화면으로 전환
+  document.getElementById('step1').classList.add('hidden');
+  document.getElementById('blind').classList.remove('hidden');
+}
+
+function showStep2(){
+  // 2P 준비 완료 → 블라인드 해제 후 2P 선택 화면
+  document.getElementById('blind').classList.add('hidden');
+  document.getElementById('step2').classList.remove('hidden');
+}
+
+function select2(c){
+  p2=c;
+  ['가위','바위','보'].forEach(x=>document.getElementById('btn2-'+x).classList.toggle('selected',x===c));
+  document.getElementById('confirmBtn2').disabled=false;
+}
+
+function confirm2(){
+  document.getElementById('step2').classList.add('hidden');
+  showResult();
+  document.getElementById('step3').classList.remove('hidden');
+}
+
+function showResult(){
+  document.getElementById('hand1').textContent=EMOJI[p1];
+  document.getElementById('hand2').textContent=EMOJI[p2];
+  document.getElementById('name1').textContent=p1;
+  document.getElementById('name2').textContent=p2;
+  let outcome,title,bannerText,bannerCls,c1,c2;
+  if(p1===p2){
+    outcome='draw';title='😐 비겼어요!';bannerText='무승부';bannerCls='draw';c1=c2='draw';
+  } else if(BEATS[p1]===p2){
+    outcome='p1win';title='🏆 1P 승리!';bannerText='1P 승리 🎉';bannerCls='p1win';c1='winner';c2='loser';
+  } else {
+    outcome='p2win';title='🏆 2P 승리!';bannerText='2P 승리 🎉';bannerCls='p2win';c1='loser';c2='winner';
+  }
+  document.getElementById('resultTitle').textContent=title;
+  document.getElementById('card1').className='player-card '+c1;
+  document.getElementById('card2').className='player-card '+c2;
+  const b=document.getElementById('resultBanner');
+  b.textContent=bannerText;b.className='result-banner '+bannerCls;
+  history.unshift({n:history.length+1,p1,p2,outcome});
+  renderHistory();
+}
+
+function renderHistory(){
+  document.getElementById('histWrap').style.display='block';
+  const label={p1win:'1P 승',p2win:'2P 승',draw:'무승부'};
+  document.getElementById('histBody').innerHTML=history.slice(0,10).map(h=>
+    `<tr><td>${h.n}</td><td>${EMOJI[h.p1]} ${h.p1}</td><td>${EMOJI[h.p2]} ${h.p2}</td><td><span class="rbadge ${h.outcome}">${label[h.outcome]}</span></td></tr>`
+  ).join('');
+}
+
+function reset(){
+  p1=null;p2=null;
+  ['가위','바위','보'].forEach(x=>{
+    document.getElementById('btn1-'+x).classList.remove('selected');
+    document.getElementById('btn2-'+x).classList.remove('selected');
+  });
+  document.getElementById('confirmBtn1').disabled=true;
+  document.getElementById('confirmBtn2').disabled=true;
+  document.getElementById('blind').classList.add('hidden');
+  document.getElementById('step2').classList.add('hidden');
+  document.getElementById('step3').classList.add('hidden');
+  document.getElementById('step1').classList.remove('hidden');
+}
+</script>
+</body>
+</html>
