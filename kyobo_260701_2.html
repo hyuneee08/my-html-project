@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<!-- saved from url=(0054)file:///C:/Users/I4U-PC-32/Downloads/kyobo_260701.html -->
+<html lang="ko"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>꼬옥이와 함께 시간 맞추기!</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; min-height: 100%; overflow: hidden; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #e8f4fd;
+      color: #1a1a1a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.6s;
+      padding: 1.5rem;
+    }
+    body.rank1-bg { background: #cce8ff; }
+
+    /* 타이머 박스(카드) 전체 감싸기 */
+    .center-wrap {
+      position: relative;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      width: 1300px; 
+      max-width: 95vw;
+    }
+
+    /* 게임 카드 스케일 조절 및 패딩 최적화 */
+    #app {
+      background: #fff;
+      border-radius: 28px;
+      padding: clamp(1.5rem, 2.5vw, 2.5rem) clamp(1.5rem, 3vw, 3rem);
+      width: 100%;
+      box-shadow: 0 6px 40px rgba(0,0,0,0.12);
+      position: relative;
+      z-index: 1;
+      max-height: 95vh;
+      overflow-y: auto;
+    }
+    #app::-webkit-scrollbar { width: 0; }
+
+    /* 타이머 박스 좌상단 로고 스타일 */
+    .app-logo {
+      position: absolute;
+      top: 20px;
+      left: 24px;
+      height: clamp(24px, 3vw, 50px); 
+      width: auto;
+      object-fit: contain;
+      z-index: 10;
+    }
+
+    /* 설정 버튼 */
+    .settings-btn {
+      position: absolute; top: 24px; right: 24px;
+      background: none; border: none; font-size: 22px; cursor: pointer;
+      color: #ccc; padding: 6px; border-radius: 8px;
+      transition: color .15s, background .15s;
+      z-index: 10;
+    }
+    .settings-btn:hover { color: #888; background: #f5f5f5; }
+
+    h1 { font-size: clamp(20px, 2.2vw, 28px); font-weight: 700; margin-bottom: 1.5rem; color: #1a1a1a; line-height: 1.4; text-align: center; }
+    h1 span { color: #4fa3e0; }
+
+    /* 레이아웃 그리드 가로 2단 분할 무조건 고정 */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: clamp(1.5rem, 3vw, 3.5rem);
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    /* 타이머 표시 및 하단 경품창 정렬 섹션 */
+    .timer-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      gap: 0.5rem;
+    }
+
+    /* 타이머 글씨 크기를 화면 폭에 맞춰 유연하게 자동 조절 */
+    .timer-display {
+      font-size: clamp(65px, 10vw, 160px); 
+      font-weight: 700; 
+      font-variant-numeric: tabular-nums;
+      font-family: "Courier New", monospace;
+      letter-spacing: -2px;
+      color: #1a1a1a;
+      line-height: 1;
+    }
+
+    .hint { font-size: clamp(12px, 1.2vw, 15px); color: #999; text-align: center; min-height: 20px; margin-bottom: 0.5rem; }
+
+    /* 타이머 하단 경품 상자 */
+    .prize-box {
+      border-radius: 16px; padding: 1.2rem;
+      height: 145px; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 4px;
+      border: 2px solid transparent;
+      text-align: center;
+      width: 100%;
+    }
+    .prize-box.rank1 { background: #fffbe6; border-color: #f5c518; }
+    .prize-box.rank2 { background: #f0f7ff; border-color: #5b9cf6; }
+    .prize-box.rank3 { background: #f3fff6; border-color: #3ecf6e; }
+    .prize-box.hidden-box { background: #f7f6f3; border-color: #eee; }
+    .prize-rank { font-size: 15px; font-weight: 700; }
+    .rank1 .prize-rank { color: #c89b00; }
+    .rank2 .prize-rank { color: #2563eb; }
+    .rank3 .prize-rank { color: #16a34a; }
+    .prize-name { font-size: 24px; font-weight: 700; color: #1a1a1a; }
+    .prize-desc { font-size: 15px; color: #666; margin-top: 2px; }
+    .prize-sub  { font-size: 13px; color: #aaa; margin-top: 2px; }
+
+    /* 우측 버튼 조작 섹션 */
+    .status-section {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+    }
+
+    /* 시작/정지 버튼 감싸기 (상대 위치 지정) */
+    .btn-wrap { 
+      width: 100%; 
+      max-width: 420px; 
+      position: relative;
+    }
+
+    /* 버튼 본체 스타일 - 내부 레이어 분리 및 오버플로우 제한 */
+    #mainBtn {
+      position: relative;
+      width: 100%; 
+      aspect-ratio: 4 / 3; 
+      border-radius: 24px; border: 3px solid #ccc; background: #fff;
+      cursor: pointer; font-size: clamp(26px, 3.5vw, 42px); font-weight: 700; color: #1a1a1a;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .15s, border-color .15s, transform .08s;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+      overflow: hidden; 
+    }
+    #mainBtn:hover { background: #f5f5f5; }
+    #mainBtn:active { transform: scale(0.98); }
+    #mainBtn.active { border-color: #4fa3e0; background: #eaf5fd; color: #2176ae; }
+    #mainBtn.rank1  { border-color: #f5c518; background: #fffbe6; color: #c89b00; }
+    #mainBtn.rank2  { border-color: #5b9cf6; background: #f0f7ff; color: #2563eb; }
+    #mainBtn.rank3  { border-color: #3ecf6e; background: #f3fff6; color: #16a34a; }
+
+    /* 버튼 내 글자 레이어 */
+    .btn-text {
+      position: relative;
+      z-index: 2;
+    }
+
+    /* 버튼 내 배경 꼬옥이 이미지 스타일 - 오른쪽 마이너스 마진 대폭 적용 */
+    .btn-bg-penguin {
+      position: absolute;
+      right: -40px;            /* 마이너스 값(-40px)으로 오른쪽으로 확실하게 더 밀어냈습니다 */
+      bottom: -15px;
+      width: clamp(140px, 22vw, 240px); 
+      opacity: 0.35; 
+      z-index: 1;
+      pointer-events: none; 
+      transition: opacity 0.2s;
+    }
+    #mainBtn:hover .btn-bg-penguin { opacity: 0.5; } 
+
+    /* 하단 데이터 영역 무조건 가로 2단 분할 고정 */
+    .data-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: clamp(1.5rem, 3vw, 3.5rem);
+      border-top: 2px solid #f0f0f0;
+      padding-top: 1.5rem;
+      margin-top: 1rem;
+    }
+
+    /* 테이블 스타일 */
+    .rank-table { width: 100%; border-collapse: collapse; font-size: clamp(12px, 1.2vw, 15px); table-layout: fixed; }
+    .rank-table th { color: #aaa; font-weight: 500; padding: 10px; border-bottom: 1px solid #f0f0ee; text-align: center; }
+    .rank-table th:nth-child(1) { width: 25%; }
+    .rank-table th:nth-child(2) { width: 35%; }
+    .rank-table th:nth-child(3) { width: 40%; }
+    .rank-table td { padding: 12px 10px; border-bottom: 1px solid #f5f5f3; text-align: center; color: #1a1a1a; word-break: break-all; }
+    .rank-table tr:last-child td { border-bottom: none; }
+    .rtag { display: inline-block; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 11px; }
+    .rtag.r1 { background: #fffbe6; color: #c89b00; }
+    .rtag.r2 { background: #f0f7ff; color: #2563eb; }
+    .rtag.r3 { background: #f3fff6; color: #16a34a; }
+
+    /* 기록란 스타일 */
+    .records-wrap { text-align: left; }
+    .records-title { font-size: 16px; font-weight: 600; color: #666; margin-bottom: 8px; }
+    
+    .records-latest table, .records-history table { width: 100%; border-collapse: collapse; font-size: clamp(12px, 1.2vw, 15px); table-layout: fixed; }
+    
+    .col-attempt { width: 20%; }
+    .col-time { width: 25%; }
+    .col-diff { width: 25%; }
+    .col-result { width: 30%; }
+
+    .records-latest th { color: #888; font-weight: 500; padding: 10px; border-bottom: 1px solid #eee; text-align: center; background: #fff; }
+    .records-latest td, .records-history td { padding: 12px 10px; border-bottom: 1px solid #f0f0f0; text-align: center; color: #1a1a1a; }
+    .records-latest tr:last-child td { border-bottom: none; }
+    
+    .history-toggle { font-size: 13px; color: #bbb; cursor: pointer; background: none; border: none; padding: 8px 0 4px; display: block; text-align: right; width: 100%; text-decoration: underline; text-underline-offset: 2px; }
+    .history-toggle:hover { color: #888; }
+    
+    .records-scroll { 
+      max-height: 145px; 
+      overflow-y: auto; 
+      margin-top: 2px; 
+      border: 1px solid #eee; 
+      border-radius: 8px; 
+      background: #fafafa;
+      width: 100%;
+    }
+    .records-scroll::-webkit-scrollbar { width: 0px; } 
+    .records-history { width: 100%; }
+    .records-history td { border-bottom: 1px solid #eee; background: #fff; }
+    .records-history tr:last-child td { border-bottom: none; }
+
+    .badge { display: inline-block; font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 600; }
+    .badge.r1 { background: #fffbe6; color: #c89b00; }
+    .badge.r2 { background: #f0f7ff; color: #2563eb; }
+    .badge.r3 { background: #f3fff6; color: #16a34a; }
+
+    /* 설정 모달 */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.35);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000; opacity: 0; pointer-events: none; transition: opacity .2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: #fff; border-radius: 20px; padding: 1.75rem 1.5rem 1.5rem;
+      width: 540px; max-width: calc(100vw - 2rem);
+      max-height: calc(100vh - 2rem); overflow-y: auto;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+      transform: translateY(12px); transition: transform .2s;
+    }
+    .modal-overlay.open .modal { transform: translateY(0); }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
+    .modal-title { font-size: 16px; font-weight: 700; color: #1a1a1a; }
+    .modal-close { background: none; border: none; font-size: 20px; color: #aaa; cursor: pointer; padding: 2px 6px; border-radius: 6px; }
+    
+    .target-setting-box {
+      background: #eef2ff; border: 1.5px solid #c7d2fe; border-radius: 14px;
+      padding: 1rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 12px;
+    }
+    .target-setting-box label { font-size: 14px; font-weight: 700; color: #4338ca; }
+    .target-input { width: 80px; padding: 6px 10px; border: 1px solid #a5b4fc; border-radius: 8px; font-size: 14px; text-align: center; font-weight: bold; }
+
+    .rank-card { border: 1.5px solid #eee; border-radius: 14px; padding: 1rem; margin-bottom: .75rem; background: #fafafa; }
+    .card-row1 { display: flex; align-items: center; gap: 8px; margin-bottom: .6rem; flex-wrap: wrap; }
+    .card-row1 label { font-size: 12px; color: #888; white-space: nowrap; font-weight: 600; }
+    .num-input { width: 68px; padding: 5px 8px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; color: #1a1a1a; text-align: center; }
+    .theme-select { padding: 5px 8px; border: 1px solid #ddd; border-radius: 8px; font-size: 12px; color: #1a1a1a; background: #fff; }
+    .del-btn { margin-left: auto; padding: 4px 12px; border: none; border-radius: 8px; background: #ff4d4d; color: #fff; font-size: 12px; font-weight: 700; cursor: pointer; }
+    .card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: .5rem; }
+    .field-wrap { display: flex; flex-direction: column; gap: 3px; }
+    .field-wrap label { font-size: 11px; color: #aaa; font-weight: 500; }
+    .field-wrap input[type=text] { padding: 6px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; color: #1a1a1a; width: 100%; }
+    .add-btn { width: 100%; padding: .7rem; border: 1.5px dashed #a5b4fc; border-radius: 12px; background: #f5f3ff; color: #6366f1; font-size: 13px; font-weight: 700; cursor: pointer; margin-bottom: 1rem; }
+    .save-btn { width: 100%; padding: .85rem; border: none; border-radius: 13px; background: #3b82f6; color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
+
+    #confetti-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 999; display: none; }
+
+    @media (max-width: 600px) {
+      .center-wrap { width: 100%; }
+      .main-grid { grid-template-columns: 1fr; gap: 1.5rem; }
+      .data-grid { grid-template-columns: 1fr; gap: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+<canvas id="confetti-canvas" width="1024" height="768"></canvas>
+
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">⚙️ 전체 게임 환경 및 경품 설정</span>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    
+    <div class="target-setting-box">
+      <label for="modalTargetInput">🎯 목표 시간 입력 :</label>
+      <input type="number" step="0.1" min="1" id="modalTargetInput" class="target-input" value="7.0">
+      <span style="font-size:13px; color:#666;">초 맞추기로 게임을 세팅합니다.</span>
+    </div>
+
+    <div id="rankCards"></div>
+    <button class="add-btn" onclick="addRankCard()">+ 구간 추가</button>
+    <button class="save-btn" onclick="saveSettings()">설정 저장하기</button>
+  </div>
+</div>
+
+<div class="center-wrap">
+<div id="app">
+    <img src="./kyobo_260701_2_files/kyobo_logo.png" alt="교보생명 로고" class="app-logo">
+
+    <img src="./kyobo_260701_2_files/2026_kyobolifeyouth_b.png" alt="꿈나무체육대회 로고" style="position: absolute; top: 20px; right: 85px; height: clamp(35px, 4vw, 50px); width: auto; object-fit: contain; z-index: 10;">
+
+    <button class="settings-btn" onclick="openModal()" title="설정">⚙️</button>
+    <h1 id="mainTitle">꼬옥이와 함께 <span id="targetText">7초 맞추기!</span></h1>
+
+    <div class="main-grid">
+      <div class="timer-section">
+        <div class="timer-display" id="timerDisplay">00:00</div>
+        <p class="hint" id="hintText">버튼을 누르면 타이머가 시작됩니다</p>
+        
+        <div class="prize-box hidden-box" id="prizeBox">
+          <div class="prize-name" style="color:#ccc" id="initialPrizeText">버튼을 눌러 시작하세요</div>
+        </div>
+      </div>
+      
+      <div class="status-section">
+        <div class="btn-wrap">
+          <button id="mainBtn" onclick="handleBtn()">
+            <span class="btn-text" id="btnText">시작</span>
+            <img class="btn-bg-penguin" id="penguin-img" src="./kyobo_260701_2_files/01_greeting.png" alt="꼬옥이 배경">
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="data-grid">
+      <div>
+        <table class="rank-table">
+          <thead>
+            <tr>
+              <th>경품</th>
+              <th>경품 기준</th>
+              <th>경품 상세</th>
+            </tr>
+          </thead>
+          <tbody id="rankTableBody"><tr><td><span class="rtag r1">1등 경품</span></td><td>±0.00 ~ 0.05초</td><td style="font-weight:600">1등 경품</td></tr><tr><td><span class="rtag r2">2등 경품</span></td><td>±0.05 ~ 0.10초</td><td style="font-weight:600">2등 경품</td></tr><tr><td><span class="rtag r3">3등 경품</span></td><td>±0.10 ~ 99.00초</td><td style="font-weight:600">3등 경품</td></tr></tbody>
+        </table>
+      </div>
+
+      <div class="records-wrap" id="recordsWrap" style="display:none;">
+        <p class="records-title">기록</p>
+        <div class="records-latest">
+          <table>
+            <colgroup>
+              <col class="col-attempt">
+              <col class="col-time">
+              <col class="col-diff">
+              <col class="col-result">
+            </colgroup>
+            <thead>
+              <tr>
+                <th>시도</th>
+                <th>시간 (초)</th>
+                <th>오차 (초)</th>
+                <th>결과</th>
+              </tr>
+            </thead>
+            <tbody id="latestBody"></tbody>
+          </table>
+        </div>
+        
+        <button class="history-toggle" id="historyToggle" onclick="toggleHistory()" style="display:none">▾ 이전 기록 보기</button>
+        
+        <div class="records-scroll" id="historyScroll" style="display:none;">
+          <table class="records-history">
+            <colgroup>
+              <col class="col-attempt">
+              <col class="col-time">
+              <col class="col-diff">
+              <col class="col-result">
+            </colgroup>
+            <tbody id="historyBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var TARGET = 7.0;
+
+var rankSettings = [
+  { minErr:0.000, maxErr:0.049, label:"1등 경품", rangeText:"±0.00 ~ 0.05초", prize:"1등 경품", prizeDesc:"", theme:"r1" },
+  { minErr:0.050, maxErr:0.100, label:"2등 경품", rangeText:"±0.05 ~ 0.10초", prize:"2등 경품", prizeDesc:"", theme:"r2" },
+  { minErr:0.101, maxErr:99.0,  label:"3등 경품", rangeText:"±0.10 ~ 99.00초", prize:"3등 경품", prizeDesc:"", theme:"r3" },
+];
+var THEME_CSS = {
+  r1:{ box:"rank1", badge:"r1", btnCls:"rank1" },
+  r2:{ box:"rank2", badge:"r2", btnCls:"rank2" },
+  r3:{ box:"rank3", badge:"r3", btnCls:"rank3" },
+};
+var THEME_LABELS = { r1:"노랑 (1등)", r2:"파랑 (2등)", r3:"초록 (3등)" };
+
+function getGrade(ms) {
+  var el = Math.floor(ms / 10) / 100;
+  var diff = Math.abs(el - TARGET);
+  diff = Math.round(diff * 100) / 100;
+
+  for (var i=0; i<rankSettings.length; i++)
+    if (diff >= rankSettings[i].minErr && diff <= rankSettings[i].maxErr) return i;
+  return rankSettings.length - 1;
+}
+function renderRankTable() {
+  document.getElementById("rankTableBody").innerHTML = rankSettings.map(function(r) {
+    var t = THEME_CSS[r.theme]||THEME_CSS.r3;
+    return "<tr><td><span class=\"rtag "+t.badge+"\">"+r.label+"</span></td><td>"+r.rangeText+"</td><td style=\"font-weight:600\">"+r.prize+"</td></tr>";
+  }).join("");
+}
+
+function updateTargetUI() {
+  document.getElementById("targetText").textContent = TARGET.toFixed(0) + "초 맞추기!";
+  document.getElementById("initialPrizeText").textContent = "버튼을 눌러 시작하세요";
+  if(running == false) {
+    document.getElementById("hintText").textContent = "버튼을 누르면 타이머가 시작됩니다";
+  }
+}
+renderRankTable();
+updateTargetUI();
+
+var running=false, startTime=null, rafId=null, records=[], historyOpen=false;
+var $timer=document.getElementById("timerDisplay"), $prize=document.getElementById("prizeBox");
+var $btn=document.getElementById("mainBtn"), $btnText=document.getElementById("btnText"), $hint=document.getElementById("hintText");
+var $recWrap=document.getElementById("recordsWrap"), $latestBody=document.getElementById("latestBody");
+var $histBody=document.getElementById("historyBody"), $histToggle=document.getElementById("historyToggle");
+var $histScroll=document.getElementById("historyScroll");
+
+var $pImg = document.getElementById("penguin-img");
+
+function fmt(ms){ 
+  var totalSec = Math.floor(ms / 10) / 100;
+  var min = Math.floor(totalSec / 60);
+  var sec = Math.floor(totalSec % 60);
+  var center = Math.floor((ms % 1000) / 10);
+  return String(sec).padStart(2,"0")+":"+String(center).padStart(2,"0"); 
+}
+function tick(){ if(!running)return; $timer.textContent=fmt(Date.now()-startTime); rafId=requestAnimationFrame(tick); }
+
+function handleBtn(){
+  if (!running && $btnText.textContent === "다시") {
+    document.body.classList.remove("rank1-bg");
+    $pImg.src = "01_greeting.png";
+    stopConfetti();
+    
+    $timer.textContent = "00:00";
+    $btnText.textContent = "시작";
+    $btn.className = ""; 
+    $prize.className = "prize-box hidden-box";
+    $prize.innerHTML = "<div class=\"prize-name\" style=\"color:#ccc\">버튼을 눌러 시작하세요</div>";
+    $hint.textContent = "버튼을 누르면 타이머가 시작됩니다";
+    return;
+  }
+
+  if(!running){
+    document.body.classList.remove("rank1-bg");
+    $pImg.src = "01_greeting.png";
+    
+    stopConfetti();
+    running=true; startTime=Date.now();
+    $btnText.textContent="정지"; $btn.className="active";
+    $prize.className="prize-box hidden-box";
+    $prize.innerHTML="<div class=\"prize-name\" style=\"color:#ccc\">" + TARGET.toFixed(2) + "초에 멈추세요!</div>";
+    $hint.textContent = TARGET.toFixed(2) + "초가 되면 버튼을 누르세요!";
+    rafId=requestAnimationFrame(tick);
+  } else {
+    running=false; cancelAnimationFrame(rafId);
+    var ms=Date.now()-startTime;
+    
+    var el = Math.floor(ms / 10) / 100;
+    var diff = Math.abs(el - TARGET);
+    
+    var elF=el.toFixed(2);
+    var dF=diff.toFixed(2);
+    
+    $timer.textContent=fmt(ms);
+    var gi=getGrade(ms), rank=rankSettings[gi], t=THEME_CSS[rank.theme]||THEME_CSS.r3;
+    $prize.className="prize-box "+t.box;
+    $prize.innerHTML="<div class=\"prize-rank\">"+rank.label+"</div><div class=\"prize-name\">"+rank.prize+"</div>"+(rank.prizeDesc?"<div class=\"prize-desc\">"+rank.prizeDesc+"</div>":"")+"<div class=\"prize-sub\">"+elF+"초 · 오차 "+dF+"초</div>";
+    $btnText.textContent="다시"; $btn.className=t.btnCls;
+    $hint.textContent="측정 시간: "+elF+"초 / 오차: "+dF+"초";
+    
+    if(rank.theme === "r1"){ 
+      document.body.classList.add("rank1-bg"); 
+      $pImg.src = "02_congrats.png"; 
+      startConfetti(); 
+    } else {
+      $pImg.src = "01_greeting.png";
+    }
+    
+    records.unshift({attempt:records.length+1,elapsed:elF,diff:dF,theme:rank.theme,label:rank.label});
+    renderRecords();
+  }
+}
+
+function renderRecords(){
+  $recWrap.style.display="block";
+  var r=records[0], t=THEME_CSS[r.theme]||THEME_CSS.r3;
+  $latestBody.innerHTML="<tr><td>"+r.attempt+"</td><td>"+r.elapsed+"</td><td>"+r.diff+"</td><td><span class=\"badge "+t.badge+"\">"+r.label+"</span></td></tr>";
+  
+  if(records.length>1){
+    $histToggle.style.display="block";
+    $histBody.innerHTML=records.slice(1).map(function(h){ 
+      var ht=THEME_CSS[h.theme]||THEME_CSS.r3;
+      return "<tr><td>"+h.attempt+"</td><td>"+h.elapsed+"</td><td>"+h.diff+"</td><td><span class=\"badge "+ht.badge+"\">"+h.label+"</span></td></tr>"; 
+    }).join("");
+  } else { 
+    $histToggle.style.display="none"; 
+    $histScroll.style.display="none"; 
+    historyOpen=false; 
+  }
+}
+
+function toggleHistory(){ 
+  historyOpen=!historyOpen; 
+  $histScroll.style.display=historyOpen?"block":"none"; 
+  $histToggle.textContent=historyOpen?"▴ 이전 기록 접기":"▾ 이전 기록 보기"; 
+}
+
+function openModal(){ 
+  document.getElementById("modalTargetInput").value = TARGET;
+  renderModalCards(); 
+  document.getElementById("modalOverlay").classList.add("open"); 
+}
+function closeModal(){ document.getElementById("modalOverlay").classList.remove("open"); }
+function closeModalOutside(e){ if(e.target===document.getElementById("modalOverlay"))closeModal(); }
+
+function syncRangeText(index) {
+  var minVal = parseFloat(document.getElementById("min-" + index).value) || 0;
+  var maxVal = parseFloat(document.getElementById("max-" + index).value) || 0;
+  var targetTextEl = document.getElementById("rangeText-" + index);
+  if (targetTextEl) {
+    targetTextEl.value = "±" + minVal.toFixed(2) + " ~ " + maxVal.toFixed(2) + "초";
+  }
+}
+
+function renderModalCards(){
+  document.getElementById("rankCards").innerHTML=rankSettings.map(function(r,i){
+    var opts=["r1","r2","r3"].map(function(v){ return "<option value=\""+v+"\""+(r.theme===v?" selected":"")+">"+THEME_LABELS[v]+"</option>"; }).join("");
+    return "<div class=\"rank-card\">"+
+      "<div class=\"card-row1\"><label>오차 범위:</label>"+
+      "<input class=\"num-input\" type=\"number\" step=\"0.001\" min=\"0\" id=\"min-"+i+"\" value=\""+r.minErr.toFixed(3)+"\" oninput=\"syncRangeText("+i+")\"> 초 ~ "+
+      "<input class=\"num-input\" type=\"number\" step=\"0.001\" min=\"0\" id=\"max-"+i+"\" value=\""+r.maxErr.toFixed(3)+"\" oninput=\"syncRangeText("+i+")\"> 초"+
+      "<select class=\"theme-select\" id=\"theme-"+i+"\">"+opts+"</select>"+
+      (rankSettings.length>1?"<button class=\"del-btn\" onclick=\"deleteRank("+i+")\">삭제</button>":"")+
+      "</div>"+
+      "<div class=\"card-grid\">"+
+        "<div class=\"field-wrap\"><label>등수 표시</label><input type=\"text\" id=\"label-"+i+"\" value=\""+r.label+"\"></div>"+
+        "<div class=\"field-wrap\"><label>오차 범위 표시 텍스트</label><input type=\"text\" id=\"rangeText-"+i+"\" value=\""+r.rangeText+"\"></div>"+
+      "</div>"+
+      "<div class=\"card-grid\" style=\"margin-top:8px\">"+
+        "<div class=\"field-wrap\"><label>경품명</label><input type=\"text\" id=\"prize-"+i+"\" value=\""+r.prize+"\"></div>"+
+        "<div class=\"field-wrap\"><label>경품 설명 (선택)</label><input type=\"text\" id=\"prizeDesc-"+i+"\" value=\""+r.prizeDesc+"\" placeholder=\"예: 스타벅스 아메리카노\"></div>"+
+      "</div></div>";
+  }).join("");
+}
+function deleteRank(i){ rankSettings.splice(i,1); renderModalCards(); }
+function addRankCard(){ rankSettings.push({minErr:0,maxErr:99,label:"🏅 새 등수",rangeText:"±0.00 ~ 99.00초",prize:"경품명",prizeDesc:"",theme:"r3"}); renderModalCards(); document.getElementById("rankCards").lastElementChild.scrollIntoView({behavior:"smooth"}); }
+
+function saveSettings(){
+  var customTarget = parseFloat(document.getElementById("modalTargetInput").value);
+  if(!isNaN(customTarget) && customTarget > 0) {
+    TARGET = customTarget;
+  }
+
+  for(var i=0;i<rankSettings.length;i++){
+    rankSettings[i].minErr=parseFloat(document.getElementById("min-"+i).value)||0;
+    rankSettings[i].maxErr=parseFloat(document.getElementById("max-"+i).value)||99;
+    rankSettings[i].label=document.getElementById("label-"+i).value||("🏅 "+(i+1)+"등");
+    rankSettings[i].rangeText=document.getElementById("rangeText-"+i).value||"";
+    rankSettings[i].prize=document.getElementById("prize-"+i).value||"경품";
+    rankSettings[i].prizeDesc=document.getElementById("prizeDesc-"+i).value||"";
+    rankSettings[i].theme=document.getElementById("theme-"+i).value||"r3";
+  }
+  
+  renderRankTable(); 
+  updateTargetUI();
+  closeModal();
+}
+
+var canvas=document.getElementById("confetti-canvas"), ctx=canvas.getContext("2d"), confettiPieces=[], confettiRaf=null;
+var COLORS=["#f5c518","#5b9cf6","#3ecf6e","#ff6b6b","#a78bfa","#fb923c","#34d399","#f472b6"];
+function startConfetti(){ canvas.style.display="block"; canvas.width=window.innerWidth; canvas.height=window.innerHeight; confettiPieces=[];
+  for(var i=0;i<220;i++){ var a=Math.random()*Math.PI*2,sp=5+Math.random()*14; confettiPieces.push({x:canvas.width/2+(Math.random()-.5)*80,y:canvas.height*.35,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-Math.random()*8,w:8+Math.random()*9,h:4+Math.random()*5,color:COLORS[Math.floor(Math.random()*COLORS.length)],rot:Math.random()*Math.PI*2,rotV:(Math.random()-.5)*.25,alpha:1,life:160+Math.floor(Math.random()*140)}); }
+  confettiRaf=requestAnimationFrame(tickConfetti); }
+function tickConfetti(){ ctx.clearRect(0,0,canvas.width,canvas.height);
+  for(var i=confettiPieces.length-1; i>=0; i--){ var p=confettiPieces[i]; p.x+=p.vx; p.y+=p.vy; p.vy+=.28; p.vx*=.99; p.rot+=p.rotV; p.life--;
+    if(p.life<60)p.alpha=p.life/60; if(p.life<=0){confettiPieces.splice(i,1);continue;}
+    ctx.save();ctx.globalAlpha=p.alpha;ctx.translate(p.x,p.y);ctx.rotate(p.rot);ctx.fillStyle=p.color;ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);ctx.restore(); }
+  if(confettiPieces.length>0)confettiRaf=requestAnimationFrame(tickConfetti); else canvas.style.display="none"; }
+function stopConfetti(){ if(confettiRaf)cancelAnimationFrame(confettiRaf); ctx.clearRect(0,0,canvas.width,canvas.height); canvas.style.display="none"; confettiPieces=[]; }
+window.addEventListener("resize",function(){ if(canvas.style.display!=="none"){canvas.width=window.innerWidth;canvas.height=window.innerHeight;} });
+</script>
+
+</body></html>
