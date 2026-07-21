@@ -102,7 +102,7 @@
     .prize-box {
       border-radius: 16px; padding: 1.2rem;
       height: 145px; display: flex; flex-direction: column;
-      align-items: center; justify-content: center; gap: 4px;
+      align-items: center; justify-content: center; gap: 2px;
       border: 2px solid transparent;
       text-align: center;
       width: 100%;
@@ -111,13 +111,15 @@
     .prize-box.rank2 { background: #f0f7ff; border-color: #5b9cf6; }
     .prize-box.rank3 { background: #f3fff6; border-color: #3ecf6e; }
     .prize-box.hidden-box { background: #f7f6f3; border-color: #eee; }
-    .prize-rank { font-size: 15px; font-weight: 700; }
+    
+    /* 등수 텍스트 크기 확대 (28px) */
+    .prize-rank { font-size: 28px; font-weight: 700; line-height: 1.2; margin-bottom: 2px; }
     .rank1 .prize-rank { color: #c89b00; }
     .rank2 .prize-rank { color: #2563eb; }
     .rank3 .prize-rank { color: #16a34a; }
-    .prize-name { font-size: 24px; font-weight: 700; color: #1a1a1a; }
-    .prize-desc { font-size: 15px; color: #666; margin-top: 2px; }
-    .prize-sub  { font-size: 13px; color: #aaa; margin-top: 2px; }
+    
+    .prize-desc { font-size: 16px; font-weight: 600; color: #444; margin-top: 2px; }
+    .prize-sub  { font-size: 13px; color: #aaa; margin-top: 4px; }
 
     /* 우측 버튼 조작 섹션 */
     .status-section {
@@ -305,8 +307,7 @@
 
 <div class="center-wrap">
 <div id="app">
-    <img src="kyobo_logo.png" alt="kyobo_logo" class="app-logo">
-
+    <img src="kyobo_logo.png" alt="교보생명 로고" class="app-logo">
     <img src="2026_kyobolifeyouth_b.png" alt="2026_kyobolifeyouth_b" style="position: absolute; top: 20px; right: 85px; height: clamp(35px, 4vw, 50px); width: auto; object-fit: contain; z-index: 10;">
 
     <button class="settings-btn" onclick="openModal()" title="설정">⚙️</button>
@@ -318,7 +319,7 @@
         <p class="hint" id="hintText">버튼을 누르면 타이머가 시작됩니다</p>
         
         <div class="prize-box hidden-box" id="prizeBox">
-          <div class="prize-name" style="color:#ccc" id="initialPrizeText">버튼을 눌러 시작하세요</div>
+          <div style="font-size: 18px; color:#ccc" id="initialPrizeText">버튼을 눌러 시작하세요</div>
         </div>
       </div>
       
@@ -393,9 +394,8 @@
 <script>
 var TARGET = 7.0;
 
-// 절대 시간(minTime ~ maxTime) 판정으로 변경 반영
 var rankSettings = [
-  { minTime:6.95, maxTime:7.05, label:"1등 경품", rangeText:"6.95 ~ 7.05초", prize:"1등 경품", prizeDesc:"", theme:"r1" },
+  { minTime:6.95, maxTime:7.05, label:"1등 경품", rangeText:"6.95 ~ 7.05초", prize:"꼬옥 인형", prizeDesc:"", theme:"r1" },
   { minTime:6.90, maxTime:7.10, label:"2등 경품", rangeText:"6.90 ~ 7.10초", prize:"2등 경품", prizeDesc:"", theme:"r2" },
   { minTime:0.00, maxTime:99.00, label:"3등 경품", rangeText:"0.00 ~ 99.00초", prize:"3등 경품", prizeDesc:"", theme:"r3" }
 ];
@@ -411,7 +411,6 @@ function getGrade(ms) {
   var el = Math.floor(ms / 10) / 100;
   el = Math.round(el * 100) / 100;
 
-  // 상위 구간부터 순차적으로 검사하여 최초 충족하는 등수 반환
   for (var i = 0; i < rankSettings.length; i++) {
     if (el >= rankSettings[i].minTime && el <= rankSettings[i].maxTime) {
       return i;
@@ -423,7 +422,8 @@ function getGrade(ms) {
 function renderRankTable() {
   document.getElementById("rankTableBody").innerHTML = rankSettings.map(function(r) {
     var t = THEME_CSS[r.theme]||THEME_CSS.r3;
-    return "<tr><td><span class=\"rtag "+t.badge+"\">"+r.label+"</span></td><td></td><td style=\"font-weight:600\">"+r.prize+"</td></tr>";
+    var displayPrize = (r.prizeDesc ? r.prizeDesc : r.prize);
+    return "<tr><td><span class=\"rtag "+t.badge+"\">"+r.label+"</span></td><td></td><td style=\"font-weight:600\">"+displayPrize+"</td></tr>";
   }).join("");
 }
 
@@ -465,7 +465,7 @@ function handleBtn(){
     $btnText.textContent = "시작";
     $btn.className = ""; 
     $prize.className = "prize-box hidden-box";
-    $prize.innerHTML = "<div class=\"prize-name\" style=\"color:#ccc\">버튼을 눌러 시작하세요</div>";
+    $prize.innerHTML = "<div style=\"font-size: 18px; color:#ccc\">버튼을 눌러 시작하세요</div>";
     $hint.textContent = "버튼을 누르면 타이머가 시작됩니다";
     return;
   }
@@ -478,7 +478,7 @@ function handleBtn(){
     running=true; startTime=Date.now();
     $btnText.textContent="정지"; $btn.className="active";
     $prize.className="prize-box hidden-box";
-    $prize.innerHTML="<div class=\"prize-name\" style=\"color:#ccc\">" + TARGET.toFixed(2) + "초에 멈추세요!</div>";
+    $prize.innerHTML="<div style=\"font-size: 18px; color:#ccc\">" + TARGET.toFixed(2) + "초에 멈추세요!</div>";
     $hint.textContent = TARGET.toFixed(2) + "초가 되면 버튼을 누르세요!";
     rafId=requestAnimationFrame(tick);
   } else {
@@ -494,7 +494,10 @@ function handleBtn(){
     $timer.textContent=fmt(ms);
     var gi=getGrade(ms), rank=rankSettings[gi], t=THEME_CSS[rank.theme]||THEME_CSS.r3;
     $prize.className="prize-box "+t.box;
-    $prize.innerHTML="<div class=\"prize-rank\">"+rank.label+"</div><div class=\"prize-name\">"+rank.prize+"</div>"+(rank.prizeDesc?"<div class=\"prize-desc\">"+rank.prizeDesc+"</div>":"")+"<div class=\"prize-sub\">"+elF+"초 · 오차 "+dF+"초</div>";
+    
+    /* 1등/2등/3등 색상 글씨를 28px로 표출하고, 검은색 중복 텍스트 제거 */
+    $prize.innerHTML="<div class=\"prize-rank\">"+rank.label+"</div>"+(rank.prizeDesc?"<div class=\"prize-desc\">"+rank.prizeDesc+"</div>":"")+"<div class=\"prize-sub\">"+elF+"초 · 오차 "+dF+"초</div>";
+    
     $btnText.textContent="다시"; $btn.className=t.btnCls;
     $hint.textContent="측정 시간: "+elF+"초 / 오차: "+dF+"초";
     
@@ -543,7 +546,6 @@ function openModal(){
 function closeModal(){ document.getElementById("modalOverlay").classList.remove("open"); }
 function closeModalOutside(e){ if(e.target===document.getElementById("modalOverlay"))closeModal(); }
 
-// 초 입력 변경 시 표시 텍스트 자동 업데이트
 function syncRangeText(index) {
   var minInput = document.getElementById("min-" + index);
   var maxInput = document.getElementById("max-" + index);
